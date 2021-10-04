@@ -1,0 +1,16 @@
+{
+    "repository": {},
+    "__outputFolder": null,
+    "blocks": [
+        {
+            "category": "nft",
+            "name": "core-custom_nft",
+            "parameters": {
+                "template": "collectible"
+            }
+        }
+    ],
+    "blockchain": "ethereum",
+    "language": "solidity",
+    "framework": "vanilla"
+}

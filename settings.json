@@ -1,0 +1,10 @@
+{
+    "name": "cryptoqueens-contract",
+    "blocks": {
+        "/blockchain/ethereum": true,
+        "/blockchain/ethereum/solidity": true,
+        "/framework/vanilla": true,
+        "/category/nft/core-custom_nft": true,
+        "/category/nft/core-custom_nft/template": "collectible"
+    }
+}
