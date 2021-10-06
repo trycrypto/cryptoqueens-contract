@@ -36,14 +36,14 @@ export default class CustomNFTHarness extends LitElement {
       >
 
       <div class="grid grid-cols-2 gap-6">
-        <!-- START: SET URI and GET URI !-->
+        <!-- START: SET NAME and GET NAME !-->
         <div>
           <action-card
-            title="Set URI"
-            description="Set metadata URI"
-            action="setURI"
+            title="Set Name"
+            description="Set name"
+            action="setName"
             method="post"
-            fields="authorized newURI">
+            fields="authorized name_">
 
             <account-widget
               field="authorized"
@@ -52,32 +52,66 @@ export default class CustomNFTHarness extends LitElement {
             </account-widget>
 
             <text-widget
-              field="newURI"
-              label="URI: "
-              placeholder="Enter the URI here">
+              field="name_"
+              label="Name: "
+              placeholder="Enter the name here">
             </text-widget>
           </action-card>
         </div>
 
         <div>
           <action-card
-            title="Get URI"
-            description="Get metadata URI"
-            action="getURI"
+            title="Get Name"
+            description="Get name"
+            action="getName"
             method="get"
             fields="">
           </action-card>
         </div>
-        <!-- END: SET URI and GET URI !-->
+        <!-- END: SET NAME and GET NAME !-->
+
+        <!-- START: SET SYMBOL and GET SYMBOL !-->
+        <div>
+          <action-card
+            title="Set Symbol"
+            description="Set symbol"
+            action="setSymbol"
+            method="post"
+            fields="authorized symbol_">
+
+            <account-widget
+              field="authorized"
+              label="From Account"
+              placeholder="Account address">
+            </account-widget>
+
+            <text-widget
+              field="symbol_"
+              label="Symbol: "
+              placeholder="Enter the symbol here">
+            </text-widget>
+          </action-card>
+        </div>
+
+        <div>
+          <action-card
+            title="Get Symbol"
+            description="Get symbol"
+            action="getSymbol"
+            method="get"
+            fields="">
+          </action-card>
+        </div>
+        <!-- END: SET SYMBOL and GET SYMBOL !-->
 
         <!-- Start: Mint !-->
         <div>
           <action-card
             title="Mint"
-            description="Create NFT or FT"
-            action="mint"
+            description="Create NFT"
+            action="safeMint"
             method="post"
-            fields="authorized account id amount data">
+            fields="authorized to tokenId data">
 
             <account-widget
               field="authorized"
@@ -86,21 +120,15 @@ export default class CustomNFTHarness extends LitElement {
             </account-widget>
 
             <account-widget
-              field="account"
+              field="to"
               label="Account"
               placeholder="Account address">
             </account-widget>
 
             <text-widget
-              field="id"
+              field="tokenId"
               label="ID: "
-              placeholder="Enter the ID of the NFT/FT here">
-            </text-widget>
-
-            <text-widget
-              field="amount"
-              label="Amount: "
-              placeholder="Enter the amount of the NFT/FT here">
+              placeholder="Enter ID here">
             </text-widget>
 
             <text-widget
@@ -110,90 +138,8 @@ export default class CustomNFTHarness extends LitElement {
             </text-widget>
           </action-card>
         </div>
-
-        <div>
-          <action-card
-            title="Mint Batch"
-            description="Create NFT or FT"
-            action="mintBatch"
-            method="post"
-            fields="authorized account id1 id2 id3 amount1 amount2 amount3 data">
-
-            <account-widget
-              field="authorized"
-              label="From Account"
-              placeholder="Account address">
-            </account-widget>
-
-            <account-widget
-              field="account"
-              label="Account"
-              placeholder="Account address">
-            </account-widget>
-
-            <div class="grid grid-cols-2 gap-6">
-              <div class="font-extrabold">ID</div>
-              <div class="font-extrabold">Amount</div>
-              <div>
-                <text-widget
-                  field="id1"
-                  label="ID: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="amount1"
-                  label="Amount: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="id2"
-                  label="ID: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="amount2"
-                  label="Amount: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="id3"
-                  label="ID: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="amount3"
-                  label="Amount: "
-                  placeholder="">
-                </text-widget>
-              </div>
-            </div>
-
-            <text-widget
-              field="data"
-              label="Data: "
-              placeholder="Enter associated data in hex">
-            </text-widget>
-          </action-card>
-        </div>
-        <!-- End: Mint !-->
+      <!-- End: Mint !-->
   </div>
-
-  <custom-nft-generator></custom-nft-generator>
 
   <div class="grid grid-cols-2 gap-6">
 
@@ -201,67 +147,43 @@ export default class CustomNFTHarness extends LitElement {
         <div>
           <action-card
             title="Get Balance"
-            description="Get balance of an account for an ID"
+            description="Get balance of an account"
             action="balanceOf"
             method="get"
-            fields="account id">
+            fields="from owner">
 
             <account-widget
-              field="account"
-              label="Account"
+              field="from"
+              label="From account"
               placeholder="Account address">
             </account-widget>
 
-            <text-widget
-              field="id"
-              label="ID: "
-              placeholder="Enter the ID of the NFT/FT here">
-            </text-widget>
+            <account-widget
+              field="owner"
+              label="Account"
+              placeholder="Account address">
+            </account-widget>
           </action-card>
         </div>
 
         <div>
           <action-card
-            title="Get Balance of Batch"
-            description="Get balance of multiple accounts for multiple IDs"
-            action="balanceOfBatch"
+            title="Check owner"
+            description="Get owner of an ID"
+            action="ownerOf"
             method="get"
-            fields="account1 account2 account3 id1 id2 id3">
+            fields="from tokenId">
 
             <account-widget
-              field="account1"
-              label="Account 1"
+              field="from"
+              label="From account"
               placeholder="Account address">
             </account-widget>
 
             <text-widget
-              field="id1"
+              field="tokenId"
               label="ID: "
-              placeholder="Enter the ID of the NFT/FT here">
-            </text-widget>
-
-            <account-widget
-              field="account2"
-              label="Account 2"
-              placeholder="Account address">
-            </account-widget>
-
-            <text-widget
-              field="id2"
-              label="ID: "
-              placeholder="Enter the ID of the NFT/FT here">
-            </text-widget>
-
-            <account-widget
-              field="account3"
-              label="Account"
-              placeholder="Account address">
-            </account-widget>
-
-            <text-widget
-              field="id3"
-              label="ID: "
-              placeholder="Enter the ID of the NFT/FT here">
+              placeholder="Enter ID here">
             </text-widget>
           </action-card>
         </div>
@@ -270,43 +192,70 @@ export default class CustomNFTHarness extends LitElement {
         <!-- Start: Proxy !-->
         <div>
           <action-card
-            title="Set Approval"
-            description="Give approval to a proxy to transfer funds on behalf of the authorizing account"
-            action="setApprovalForAll"
+            title="Get Approved"
+            description="Get approved"
+            action="getApproved"
             method="post"
-            fields="from operator approved">
+            fields="from tokenId">
 
             <account-widget
               field="from"
-              label="Authorizing account"
-              placeholder="Select account address">
+              label="From account"
+              placeholder="Account address">
+            </account-widget>
+
+            <text-widget
+              field="tokenId"
+              label="ID: "
+              placeholder="Enter ID here">
+            </text-widget>
+          </action-card>
+        </div>
+
+        <div>
+          <action-card
+            title="Set Approval For All"
+            description="Set approval for all"
+            action="setApprovalForAll"
+            method="post"
+            fields="authorized operator approved">
+
+            <account-widget
+              field="authorized"
+              label="Account"
+              placeholder="Account address">
             </account-widget>
 
             <account-widget
               field="operator"
-              label="Proxy"
-              placeholder="Select proxy address">
+              label="Operator"
+              placeholder="Account address">
             </account-widget>
 
-            <switch-widget 
-              field="approved" 
-              label="Approve" 
-              placeholder="">
+            <switch-widget
+              field="approved"
+              label="True or false">
             </switch-widget>
           </action-card>
         </div>
 
         <div>
           <action-card
-            title="Check Approval"
-            description="Check if the proxy is authorized"
+            title="Check Approval for All"
+            description="Get approval"
             action="isApprovedForAll"
             method="get"
-            fields="account operator">
+            fields="from owner operator">
 
             <account-widget
-              field="account"
+              field="from"
               label="Account"
+              placeholder="Account address">
+            </account-widget>
+
+            <account-widget
+              field="owner"
+              label="Owner"
               placeholder="Account address">
             </account-widget>
 
@@ -322,16 +271,16 @@ export default class CustomNFTHarness extends LitElement {
         <!-- Start: Transfer !-->
         <div>
           <action-card
-            title="Transfer"
+            title="Transfer From"
             description="Transfer tokens from one account to another"
             action="safeTransferFrom"
             method="post"
-            fields="authorized from to id amount data">
+            fields="authorized from to tokenId">
 
             <account-widget
               field="authorized"
-              label="Proxy Account"
-              placeholder="Proxy account">
+              label="Authorized Account"
+              placeholder="Authorized account">
             </account-widget>
 
             <account-widget
@@ -347,37 +296,25 @@ export default class CustomNFTHarness extends LitElement {
             </account-widget>
 
             <text-widget
-              field="id"
+              field="tokenId"
               label="ID: "
-              placeholder="Enter the ID of the NFT/FT here">
-            </text-widget>
-
-            <text-widget
-              field="amount"
-              label="Amount: "
-              placeholder="Enter the amount of the NFT/FT here">
-            </text-widget>
-
-            <text-widget
-              field="data"
-              label="Data: "
-              placeholder="Enter associated data in hex">
+              placeholder="Enter the ID">
             </text-widget>
           </action-card>
         </div>
 
         <div>
-          <action-card
-            title="Transfer Batch"
-            description="Transfer batch of tokens from one account to another"
-            action="safeBatchTransferFrom"
+        <action-card
+            title="Transfer"
+            description="Transfer tokens from one account to another"
+            action="safeTransfer"
             method="post"
-            fields="authorized from to id1 id2 id3 amount1 amount2 amount3 data">
+            fields="authorized from to tokenId data">
 
             <account-widget
               field="authorized"
-              label="Proxy Account"
-              placeholder="Proxy account">
+              label="Authorized Account"
+              placeholder="Authorized account">
             </account-widget>
 
             <account-widget
@@ -392,62 +329,16 @@ export default class CustomNFTHarness extends LitElement {
               placeholder="Recipient's account">
             </account-widget>
 
-            <div class="grid grid-cols-2 gap-6">
-              <div class="font-extrabold">ID</div>
-              <div class="font-extrabold">Amount</div>
-              <div>
-                <text-widget
-                  field="id1"
-                  label="ID: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="amount1"
-                  label="Amount: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="id2"
-                  label="ID: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="amount2"
-                  label="Amount: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="id3"
-                  label="ID: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="amount3"
-                  label="Amount: "
-                  placeholder="">
-                </text-widget>
-              </div>
-            </div>
+            <text-widget
+              field="tokenId"
+              label="ID: "
+              placeholder="Enter the ID">
+            </text-widget>
 
             <text-widget
               field="data"
               label="Data: "
-              placeholder="Enter associated data in hex">
+              placeholder="Enter the data">
             </text-widget>
           </action-card>
         </div>
@@ -457,10 +348,10 @@ export default class CustomNFTHarness extends LitElement {
         <div>
           <action-card
             title="Burn"
-            description="Burn NFT or FT"
+            description="Burn NFT"
             action="burn"
             method="post"
-            fields="authorized account id amount">
+            fields="authorized tokenId">
 
             <account-widget
               field="authorized"
@@ -468,97 +359,11 @@ export default class CustomNFTHarness extends LitElement {
               placeholder="Account address">
             </account-widget>
 
-            <account-widget
-              field="account"
-              label="Account"
-              placeholder="Account address">
-            </account-widget>
-
             <text-widget
-              field="id"
+              field="tokenId"
               label="ID: "
-              placeholder="Enter the ID of the NFT/FT here">
+              placeholder="Enter the ID">
             </text-widget>
-
-            <text-widget
-              field="amount"
-              label="Amount: "
-              placeholder="Enter the amount of the NFT/FT here">
-            </text-widget>
-          </action-card>
-        </div>
-
-        <div>
-          <action-card
-            title="Burn Batch"
-            description="Burn a batch of NFT or FT"
-            action="burnBatch"
-            method="post"
-            fields="authorized account id1 id2 id3 amount1 amount2 amount3">
-
-            <account-widget
-              field="authorized"
-              label="From Account"
-              placeholder="Account address">
-            </account-widget>
-
-            <account-widget
-              field="account"
-              label="Account"
-              placeholder="Account address">
-            </account-widget>
-
-            <div class="grid grid-cols-2 gap-6">
-              <div class="font-extrabold">ID</div>
-              <div class="font-extrabold">Amount</div>
-              <div>
-                <text-widget
-                  field="id1"
-                  label="ID: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="amount1"
-                  label="Amount: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="id2"
-                  label="ID: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="amount2"
-                  label="Amount: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="id3"
-                  label="ID: "
-                  placeholder="">
-                </text-widget>
-              </div>
-
-              <div>
-                <text-widget
-                  field="amount3"
-                  label="Amount: "
-                  placeholder="">
-                </text-widget>
-              </div>
-            </div>
           </action-card>
         </div>
         <!-- End: Burn !-->

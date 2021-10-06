@@ -4,13 +4,13 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/IDappState.sol";
 import "./DappLib.sol";
-import "./interfaces/IERC1155.sol";
-import "./interfaces/IERC1155Receiver.sol";
-import "./interfaces/IERC1155MetadataURI.sol";
+import "./interfaces/IERC721.sol";
+import "./interfaces/IERC721Receiver.sol";
+import "./interfaces/IERC721Metadata.sol";
 import "./imports/custom_nft/Address.sol";
 import "./imports/custom_nft/Context.sol";
+import "./imports/custom_nft/Strings.sol";
 import "./imports/custom_nft/ERC165.sol";
-import "./imports/custom_nft/generator/generator.sol";
 
 
 
@@ -23,33 +23,43 @@ import "./imports/custom_nft/generator/generator.sol";
 /* continue using this one.                                                                 */
 /********************************************************************************************/
 
-contract DappState is IDappState 
-                      ,Context, ERC165, IERC1155, IERC1155MetadataURI
+contract DappState is IDappState, Context, ERC165, IERC721, IERC721Metadata
+                      
 
 {
     // Allow DappLib(SafeMath) functions to be called for all uint256 types
     // (similar to "prototype" in Javascript)
     using DappLib for uint256; 
     using Address for address;
+    using Strings for uint256;
 
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ S T A T E @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
 
+    
+    
     // Account used to deploy contract
     address private contractOwner;                  
-    // Mapping from token ID to account balances
-    mapping (uint256 => mapping(address => uint256)) private balances;
 
-    // Mapping from account to operator approvals
-    mapping (address => mapping(address => bool)) private operatorApprovals;
+    // Token name
+    string private _name;
 
-    // Mapping from token ID to metadata    
-    mapping (uint256 => Generator.MetaData) public metadata;
+    // Token symbol
+    string private _symbol;
 
-    // Used as the URI for all token types by relying on ID substitution, e.g. https://token-cdn-domain/{id}.json
-    string private uri;
+    // Mapping from token ID to owner address
+    mapping(uint256 => address) private _owners;
+
+    // Mapping owner address to token count
+    mapping(address => uint256) private _balances;
+
+    // Mapping from token ID to approved address
+    mapping(uint256 => address) private _tokenApprovals;
+
+    // Mapping from owner to operator approvals
+    mapping(address => mapping(address => bool)) private _operatorApprovals;
 
 /*>>>>>>>>>>>>>>>>>>>>>>>>>>> ACCESS CONTROL: ADMINISTRATOR ROLE  <<<<<<<<<<<<<<<<<<<<<<<<<<*/
     // Track authorized admins count to prevent lockout
@@ -100,391 +110,383 @@ contract DappState is IDappState
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ F U N C T I O N S @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
 
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
-        return interfaceId == type(IERC1155).interfaceId
-            || interfaceId == type(IERC1155MetadataURI).interfaceId
-            || super.supportsInterface(interfaceId);
+        return
+            interfaceId == type(IERC721).interfaceId ||
+            interfaceId == type(IERC721Metadata).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
-
     /**
-     * @dev See {IERC1155MetadataURI-uri}.
-     *
-     * This implementation returns the same URI for *all* token types. It relies
-     * on the token type ID substitution mechanism
-     * https://eips.ethereum.org/EIPS/eip-1155#metadata[defined in the EIP].
-     *
-     * Clients calling this function must replace the `\{id\}` substring with the
-     * actual token type ID.
+     * @dev See {IERC721-balanceOf}.
      */
-    function getURI() public view virtual override returns (string memory) {
-        return uri;
+    function balanceOf(address owner) public view virtual override returns (uint256) {
+        require(owner != address(0), "ERC721: balance query for the zero address");
+        return _balances[owner];
     }
 
     /**
-        @notice Transfers `amount` amount of an `id` from the `from` address to the `to` address specified (with safety call).
-        @dev Caller must be approved to manage the tokens being transferred out of the `from` account (see "Approval" section of the standard).
-        MUST revert if `to` is the zero address.
-        MUST revert if balance of holder for token `id` is lower than the `amount` sent.
-        MUST revert on any other error.
-        MUST emit the `TransferSingle` event to reflect the balance change (see "Safe Transfer Rules" section of the standard).
-        After the above conditions are met, this function MUST check if `to` is a smart contract (e.g. code size > 0). If so, it MUST call `onERC1155Received` on `to` and act appropriately (see "Safe Transfer Rules" section of the standard).
-        @param from    Source address
-        @param to      Target address
-        @param id      ID of the token type
-        @param amount   Transfer amount
-        @param data    Additional data with no specified format, MUST be sent unaltered in call to `onERC1155Received` on `to`
-    */
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory data
-    )
-        public
-        virtual
-        override
-    {
-        require(to != address(0), "ERC1155: transfer to the zero address");
+     * @dev See {IERC721-ownerOf}.
+     */
+    function ownerOf(uint256 tokenId) public view virtual override returns (address) {
+        address owner = _owners[tokenId];
+        require(owner != address(0), "ERC721: owner query for nonexistent token");
+        return owner;
+    }
+
+    /**
+     * @dev See {IERC721Metadata-name}.
+     */
+    function setName(string memory name_) public virtual {
+        _name = name_;
+    }
+
+    /**
+     * @dev See {IERC721Metadata-symbol}.
+     */
+    function setSymbol(string memory symbol_) public virtual {
+        _symbol = symbol_;
+    }
+
+        /**
+     * @dev See {IERC721Metadata-name}.
+     */
+    function name() public view virtual override returns (string memory) {
+        return _name;
+    }
+
+    /**
+     * @dev See {IERC721Metadata-symbol}.
+     */
+    function symbol() public view virtual override returns (string memory) {
+        return _symbol;
+    }
+
+    /**
+     * @dev See {IERC721Metadata-tokenURI}.
+     */
+    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+
+        string memory baseURI = _baseURI();
+        return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
+    }
+
+    /**
+     * @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
+     * token will be the concatenation of the `baseURI` and the `tokenId`. Empty
+     * by default, can be overriden in child contracts.
+     */
+    function _baseURI() internal view virtual returns (string memory) {
+        return "";
+    }
+
+    /**
+     * @dev See {IERC721-approve}.
+     */
+    function approve(address to, uint256 tokenId) public virtual override {
+        address owner = DappState.ownerOf(tokenId);
+        require(to != owner, "ERC721: approval to current owner");
+
         require(
-            from == msgSender() || isApprovedForAll(from, msgSender()),
-            "ERC1155: caller is not owner nor approved"
+            msgSender() == owner || isApprovedForAll(owner, msgSender()),
+            "ERC721: approve caller is not owner nor approved for all"
         );
 
-        address operator = msgSender();
-
-        beforeTokenTransfer(operator, from, to, asSingletonArray(id), asSingletonArray(amount), data);
-
-        uint256 fromBalance = balances[id][from];
-        require(fromBalance >= amount, "ERC1155: insufficient balance for transfer");
-        balances[id][from] = fromBalance - amount;
-        balances[id][to] += amount;
-
-        emit TransferSingle(operator, from, to, id, amount);
-
-        doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
+        _approve(to, tokenId);
     }
 
     /**
-        @notice Transfers `amounts` amount(s) of `ids` from the `from` address to the `to` address specified (with safety call).
-        @dev Caller must be approved to manage the tokens being transferred out of the `from` account (see "Approval" section of the standard).
-        MUST revert if `to` is the zero address.
-        MUST revert if length of `ids` is not the same as length of `amounts`.
-        MUST revert if any of the balance(s) of the holder(s) for token(s) in `ids` is lower than the respective amount(s) in `amounts` sent to the recipient.
-        MUST revert on any other error.
-        MUST emit `TransferSingle` or `TransferBatch` event(s) such that all the balance changes are reflected (see "Safe Transfer Rules" section of the standard).
-        Balance changes and events MUST follow the ordering of the arrays (_ids[0]/_values[0] before _ids[1]/_values[1], etc).
-        After the above conditions for the transfer(s) in the batch are met, this function MUST check if `to` is a smart contract (e.g. code size > 0). If so, it MUST call the relevant `ERC1155TokenReceiver` hook(s) on `to` and act appropriately (see "Safe Transfer Rules" section of the standard).
-        @param from    Source address
-        @param to      Target address
-        @param ids     IDs of each token type (order and length must match _values array)
-        @param amounts  Transfer amounts per token type (order and length must match _ids array)
-        @param data    Additional data with no specified format, MUST be sent unaltered in call to the `ERC1155TokenReceiver` hook(s) on `to`
-    */
-        function safeBatchTransferFrom(
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    )
-        public
-        virtual
-        override
-    {
-        require(ids.length == amounts.length, "ERC1155: ids and amounts length mismatch");
-        require(to != address(0), "ERC1155: transfer to the zero address");
-        require(
-            from == msgSender() || isApprovedForAll(from, msgSender()),
-            "ERC1155: transfer caller is not owner nor approved"
-        );
-
-        address operator = msgSender();
-
-        beforeTokenTransfer(operator, from, to, ids, amounts, data);
-
-        for (uint256 i = 0; i < ids.length; ++i) {
-            uint256 id = ids[i];
-            uint256 amount = amounts[i];
-
-            uint256 fromBalance = balances[id][from];
-            require(fromBalance >= amount, "ERC1155: insufficient balance for transfer");
-            balances[id][from] = fromBalance - amount;
-            balances[id][to] += amount;
-        }
-
-        emit TransferBatch(operator, from, to, ids, amounts);
-
-        doSafeBatchTransferAcceptanceCheck(operator, from, to, ids, amounts, data);
-    }
-
-    /**
-        @notice Get the balance of an account's Tokens.
-        @param account  The address of the token holder
-        @param id     ID of the Token
-        @return        The _owner's balance of the Token type requested
+     * @dev See {IERC721-getApproved}.
      */
-    function balanceOf(address account, uint256 id) public view virtual override returns (uint256) {
-        require(account != address(0), "ERC1155: balance query for the zero address");
-        return balances[id][account];
+    function getApproved(uint256 tokenId) public view virtual override returns (address) {
+        require(_exists(tokenId), "ERC721: approved query for nonexistent token");
+
+        return _tokenApprovals[tokenId];
     }
 
-
     /**
-        @notice Get the balance of multiple account/token pairs
-        @param accounts The addresses of the token holders
-        @param ids    ID of the Tokens
-        @return        The _owner's balance of the Token types requested (i.e. balance for each (owner, id) pair)
+     * @dev See {IERC721-setApprovalForAll}.
      */
-    function balanceOfBatch(
-        address[] memory accounts,
-        uint256[] memory ids
-    )
-        public
-        view
-        virtual
-        override
-        returns (uint256[] memory)
-    {
-        require(accounts.length == ids.length, "ERC1155: accounts and ids length mismatch");
-
-        uint256[] memory batchBalances = new uint256[](accounts.length);
-
-        for (uint256 i = 0; i < accounts.length; ++i) {
-            batchBalances[i] = balanceOf(accounts[i], ids[i]);
-        }
-
-        return batchBalances;
-    }
-
-    /**
-        @notice Enable or disable approval for a third party ("operator") to manage all of the caller's tokens.
-        @dev MUST emit the ApprovalForAll event on success.
-        @param operator  Address to add to the set of authorized operators
-        @param approved  True if the operator is approved, false to revoke approval
-    */
     function setApprovalForAll(address operator, bool approved) public virtual override {
-        require(msgSender() != operator, "ERC1155: setting approval status for self");
+        require(operator != msgSender(), "ERC721: approve to caller");
 
-        operatorApprovals[msgSender()][operator] = approved;
+        _operatorApprovals[msgSender()][operator] = approved;
         emit ApprovalForAll(msgSender(), operator, approved);
     }
 
     /**
-        @notice Queries the approval status of an operator for a given owner.
-        @param account     The owner of the Tokens
-        @param operator  Address of authorized operator
-        @return           True if the operator is approved, false if not
-    */
-    function isApprovedForAll(address account, address operator) public view virtual override returns (bool) {
-        return operatorApprovals[account][operator];
-    }
-
-    /**
-     * @dev Sets a new URI for all token types, by relying on the token type ID
-     * substitution mechanism
-     * https://eips.ethereum.org/EIPS/eip-1155#metadata[defined in the EIP].
-     *
-     * By this mechanism, any occurrence of the `\{id\}` substring in either the
-     * URI or any of the amounts in the JSON file at said URI will be replaced by
-     * clients with the token type ID.
-     *
-     * For example, the `https://token-cdn-domain/\{id\}.json` URI would be
-     * interpreted by clients as
-     * `https://token-cdn-domain/000000000000000000000000000000000000000000000000000000000004cce0.json`
-     * for token type ID 0x4cce0.
-     *
-     * See {uri}.
-     *
-     * Because these URIs cannot be meaningfully represented by the {URI} event,
-     * this function emits no events.
+     * @dev See {IERC721-isApprovedForAll}.
      */
-    function setURI(string memory newuri) external virtual requireContractAdmin {
-        uri = newuri;
+    function isApprovedForAll(address owner, address operator) public view virtual override returns (bool) {
+        return _operatorApprovals[owner][operator];
     }
 
     /**
-     * @dev Creates `amount` tokens of token type `id`, and assigns them to `account`.
+     * @dev See {IERC721-transferFrom}.
+     */
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override {
+        //solhint-disable-next-line max-line-length
+        require(_isApprovedOrOwner(msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
+
+        _transfer(from, to, tokenId);
+    }
+
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     */
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override {
+        safeTransferFrom(from, to, tokenId, "");
+    }
+
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     */
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory _data
+    ) public virtual override {
+        require(_isApprovedOrOwner(msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
+        _safeTransfer(from, to, tokenId, _data);
+    }
+
+    /**
+     * @dev Safely transfers `tokenId` token from `from` to `to`, checking first that contract recipients
+     * are aware of the ERC721 protocol to prevent tokens from being forever locked.
      *
-     * Emits a {TransferSingle} event.
+     * `_data` is additional data, it has no specified format and it is sent in call to `to`.
+     *
+     * This internal function is equivalent to {safeTransferFrom}, and can be used to e.g.
+     * implement alternative mechanisms to perform token transfer, such as signature-based.
      *
      * Requirements:
      *
-     * - `account` cannot be the zero address.
-     * - If `account` refers to a smart contract, it must implement {IERC1155Receiver-onERC1155Received} and return the
-     * acceptance magic value.
+     * - `from` cannot be the zero address.
+     * - `to` cannot be the zero address.
+     * - `tokenId` token must exist and be owned by `from`.
+     * - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon a safe transfer.
+     *
+     * Emits a {Transfer} event.
      */
-    function mint(address account, uint256 id, uint256 amount, bytes memory data) public virtual requireContractAdmin {
-        require(account != address(0), "ERC1155: mint to the zero address");
-
-        address operator = msgSender();
-
-        beforeTokenTransfer(operator, address(0), account, asSingletonArray(id), asSingletonArray(amount), data);
-
-        balances[id][account] += amount;
-        emit TransferSingle(operator, address(0), account, id, amount);
-
-        doSafeTransferAcceptanceCheck(operator, address(0), account, id, amount, data);
-    }
-
-    function mintNFT(address account, uint256 id, uint256 amount, Generator.MetaData memory metaData) external virtual requireContractAdmin {
-        mint(account, id, amount, "");
-        metadata[id] = metaData;
+    function _safeTransfer(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory _data
+    ) public virtual {
+        _transfer(from, to, tokenId);
+        require(_checkOnERC721Received(from, to, tokenId, _data), "ERC721: transfer to non ERC721Receiver implementer");
     }
 
     /**
-     * @dev xref:ROOT:erc1155.adoc#batch-operations[Batched] version of {mint}.
+     * @dev Returns whether `tokenId` exists.
+     *
+     * Tokens can be managed by their owner or approved accounts via {approve} or {setApprovalForAll}.
+     *
+     * Tokens start existing when they are minted (`_mint`),
+     * and stop existing when they are burned (`_burn`).
+     */
+    function _exists(uint256 tokenId) internal view virtual returns (bool) {
+        return _owners[tokenId] != address(0);
+    }
+
+    /**
+     * @dev Returns whether `spender` is allowed to manage `tokenId`.
      *
      * Requirements:
      *
-     * - `ids` and `amounts` must have the same length.
-     * - If `to` refers to a smart contract, it must implement {IERC1155Receiver-onERC1155BatchReceived} and return the
-     * acceptance magic value.
+     * - `tokenId` must exist.
      */
-    function mintBatch(address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) external virtual requireContractAdmin {
-        require(to != address(0), "ERC1155: mint to the zero address");
-        require(ids.length == amounts.length, "ERC1155: ids and amounts length mismatch");
+    function _isApprovedOrOwner(address spender, uint256 tokenId) internal view virtual returns (bool) {
+        require(_exists(tokenId), "ERC721: operator query for nonexistent token");
+        address owner = DappState.ownerOf(tokenId);
+        return (spender == owner || getApproved(tokenId) == spender || isApprovedForAll(owner, spender));
+    }
 
-        address operator = msgSender();
+    /**
+     * @dev Safely mints `tokenId` and transfers it to `to`.
+     *
+     * Requirements:
+     *
+     * - `tokenId` must not exist.
+     * - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon a safe transfer.
+     *
+     * Emits a {Transfer} event.
+     */
+    function _safeMint(address to, uint256 tokenId) external virtual requireContractAdmin {
+        _safeMint(to, tokenId, "");
+    }
 
-        beforeTokenTransfer(operator, address(0), to, ids, amounts, data);
+    /**
+     * @dev Same as {xref-ERC721-_safeMint-address-uint256-}[`_safeMint`], with an additional `data` parameter which is
+     * forwarded in {IERC721Receiver-onERC721Received} to contract recipients.
+     */
+    function _safeMint(
+        address to,
+        uint256 tokenId,
+        bytes memory _data
+    ) public virtual requireContractAdmin {
+        _mint(to, tokenId);
+        require(
+            _checkOnERC721Received(address(0), to, tokenId, _data),
+            "ERC721: transfer to non ERC721Receiver implementer"
+        );
+    }
 
-        for (uint i = 0; i < ids.length; i++) {
-            balances[ids[i]][to] += amounts[i];
+    /**
+     * @dev Mints `tokenId` and transfers it to `to`.
+     *
+     * WARNING: Usage of this method is discouraged, use {_safeMint} whenever possible
+     *
+     * Requirements:
+     *
+     * - `tokenId` must not exist.
+     * - `to` cannot be the zero address.
+     *
+     * Emits a {Transfer} event.
+     */
+    function _mint(address to, uint256 tokenId) internal virtual {
+        require(to != address(0), "ERC721: mint to the zero address");
+        require(!_exists(tokenId), "ERC721: token already minted");
+
+        _beforeTokenTransfer(address(0), to, tokenId);
+
+        _balances[to] += 1;
+        _owners[tokenId] = to;
+
+        emit Transfer(address(0), to, tokenId);
+    }
+
+    /**
+     * @dev Destroys `tokenId`.
+     * The approval is cleared when the token is burned.
+     *
+     * Requirements:
+     *
+     * - `tokenId` must exist.
+     *
+     * Emits a {Transfer} event.
+     */
+    function _burn(uint256 tokenId) public virtual requireContractAdmin {
+        address owner = DappState.ownerOf(tokenId);
+
+        _beforeTokenTransfer(owner, address(0), tokenId);
+
+        // Clear approvals
+        _approve(address(0), tokenId);
+
+        _balances[owner] -= 1;
+        delete _owners[tokenId];
+
+        emit Transfer(owner, address(0), tokenId);
+    }
+
+    /**
+     * @dev Transfers `tokenId` from `from` to `to`.
+     *  As opposed to {transferFrom}, this imposes no restrictions on msg.sender.
+     *
+     * Requirements:
+     *
+     * - `to` cannot be the zero address.
+     * - `tokenId` token must be owned by `from`.
+     *
+     * Emits a {Transfer} event.
+     */
+    function _transfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal virtual {
+        require(DappState.ownerOf(tokenId) == from, "ERC721: transfer of token that is not own");
+        require(to != address(0), "ERC721: transfer to the zero address");
+
+        _beforeTokenTransfer(from, to, tokenId);
+
+        // Clear approvals from the previous owner
+        _approve(address(0), tokenId);
+
+        _balances[from] -= 1;
+        _balances[to] += 1;
+        _owners[tokenId] = to;
+
+        emit Transfer(from, to, tokenId);
+    }
+
+    /**
+     * @dev Approve `to` to operate on `tokenId`
+     *
+     * Emits a {Approval} event.
+     */
+    function _approve(address to, uint256 tokenId) public virtual requireContractAdmin {
+        _tokenApprovals[tokenId] = to;
+        emit Approval(DappState.ownerOf(tokenId), to, tokenId);
+    }
+
+    /**
+     * @dev Internal function to invoke {IERC721Receiver-onERC721Received} on a target address.
+     * The call is not executed if the target address is not a contract.
+     *
+     * @param from address representing the previous owner of the given token ID
+     * @param to target address that will receive the tokens
+     * @param tokenId uint256 ID of the token to be transferred
+     * @param _data bytes optional data to send along with the call
+     * @return bool whether the call correctly returned the expected magic value
+     */
+    function _checkOnERC721Received(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory _data
+    ) private returns (bool) {
+        if (to.isContract()) {
+            try IERC721Receiver(to).onERC721Received(msgSender(), from, tokenId, _data) returns (bytes4 retval) {
+                return retval == IERC721Receiver.onERC721Received.selector;
+            } catch (bytes memory reason) {
+                if (reason.length == 0) {
+                    revert("ERC721: transfer to non ERC721Receiver implementer");
+                } else {
+                    assembly {
+                        revert(add(32, reason), mload(reason))
+                    }
+                }
+            }
+        } else {
+            return true;
         }
-
-        emit TransferBatch(operator, address(0), to, ids, amounts);
-
-        doSafeBatchTransferAcceptanceCheck(operator, address(0), to, ids, amounts, data);
-    }
-
-    /**
-     * @dev Destroys `amount` tokens of token type `id` from `account`
-     *
-     * Requirements:
-     *
-     * - `account` cannot be the zero address.
-     * - `account` must have at least `amount` tokens of token type `id`.
-     */
-    function burn(address account, uint256 id, uint256 amount) external virtual requireContractAdmin {
-        require(account != address(0), "ERC1155: burn from the zero address");
-
-        address operator = msgSender();
-
-        beforeTokenTransfer(operator, account, address(0), asSingletonArray(id), asSingletonArray(amount), "");
-
-        uint256 accountBalance = balances[id][account];
-        require(accountBalance >= amount, "ERC1155: burn amount exceeds balance");
-        balances[id][account] = accountBalance - amount;
-
-        emit TransferSingle(operator, account, address(0), id, amount);
-    }
-
-    /**
-     * @dev xref:ROOT:erc1155.adoc#batch-operations[Batched] version of {burn}.
-     *
-     * Requirements:
-     *
-     * - `ids` and `amounts` must have the same length.
-     */
-    function burnBatch(address account, uint256[] memory ids, uint256[] memory amounts) external virtual requireContractAdmin {
-        require(account != address(0), "ERC1155: burn from the zero address");
-        require(ids.length == amounts.length, "ERC1155: ids and amounts length mismatch");
-
-        address operator = msgSender();
-
-        beforeTokenTransfer(operator, account, address(0), ids, amounts, "");
-
-        for (uint i = 0; i < ids.length; i++) {
-            uint256 id = ids[i];
-            uint256 amount = amounts[i];
-
-            uint256 accountBalance = balances[id][account];
-            require(accountBalance >= amount, "ERC1155: burn amount exceeds balance");
-            balances[id][account] = accountBalance - amount;
-        }
-
-        emit TransferBatch(operator, account, address(0), ids, amounts);
     }
 
     /**
      * @dev Hook that is called before any token transfer. This includes minting
-     * and burning, as well as batched variants.
+     * and burning.
      *
-     * The same hook is called on both single and batched variants. For single
-     * transfers, the length of the `id` and `amount` arrays will be 1.
+     * Calling conditions:
      *
-     * Calling conditions (for each `id` and `amount` pair):
-     *
-     * - When `from` and `to` are both non-zero, `amount` of ``from``'s tokens
-     * of token type `id` will be  transferred to `to`.
-     * - When `from` is zero, `amount` tokens of token type `id` will be minted
-     * for `to`.
-     * - when `to` is zero, `amount` of ``from``'s tokens of token type `id`
-     * will be burned.
+     * - When `from` and `to` are both non-zero, ``from``'s `tokenId` will be
+     * transferred to `to`.
+     * - When `from` is zero, `tokenId` will be minted for `to`.
+     * - When `to` is zero, ``from``'s `tokenId` will be burned.
      * - `from` and `to` are never both zero.
-     * - `ids` and `amounts` have the same, non-zero length.
      *
      * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
      */
-    function beforeTokenTransfer(
-        address operator,
+    function _beforeTokenTransfer(
         address from,
         address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    )
-        internal
-        virtual
-    { }
-
-    function doSafeTransferAcceptanceCheck(
-        address operator,
-        address from,
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory data
-    )
-        private
-    {
-        if (to.isContract()) {
-            try IERC1155Receiver(to).onERC1155Received(operator, from, id, amount, data) returns (bytes4 response) {
-                if (response != IERC1155Receiver(to).onERC1155Received.selector) {
-                    revert("ERC1155: ERC1155Receiver rejected tokens");
-                }
-            } catch Error(string memory reason) {
-                revert(reason);
-            } catch {
-                revert("ERC1155: transfer to non ERC1155Receiver implementer");
-            }
-        }
-    }
-
-    function doSafeBatchTransferAcceptanceCheck(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    )
-        private
-    {
-        if (to.isContract()) {
-            try IERC1155Receiver(to).onERC1155BatchReceived(operator, from, ids, amounts, data) returns (bytes4 response) {
-                if (response != IERC1155Receiver(to).onERC1155BatchReceived.selector) {
-                    revert("ERC1155: ERC1155Receiver rejected tokens");
-                }
-            } catch Error(string memory reason) {
-                revert(reason);
-            } catch {
-                revert("ERC1155: transfer to non ERC1155Receiver implementer");
-            }
-        }
-    }
+        uint256 tokenId
+    ) internal virtual {}
 
     function asSingletonArray(uint256 element) private pure returns (uint256[] memory) {
         uint256[] memory array = new uint256[](1);

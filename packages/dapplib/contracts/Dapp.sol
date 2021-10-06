@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/IDappState.sol";
+import "./DappState.sol";
 import "./DappLib.sol";
 
     /*
@@ -29,7 +30,7 @@ import "./DappLib.sol";
     */
 
 
-contract Dapp {
+contract Dapp is DappState  {
     // Allow DappLib(SafeMath) functions to be called for all uint256 types
     // (similar to "prototype" in Javascript)
     using DappLib for uint256;
@@ -41,10 +42,14 @@ contract Dapp {
     // function in the state contract that it is aware of (by way of IDappState).
     constructor 
                 (
-                    address dappStateContract 
+                    address dappStateContract
                 )
     {
         state = IDappState(dappStateContract);
+    }
+
+    function _baseURI() override internal view virtual returns (string memory) {
+        return "https://creatures-api.opensea.io/api/creature/";
     }
 
     /**
